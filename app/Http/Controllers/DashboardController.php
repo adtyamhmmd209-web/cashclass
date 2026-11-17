@@ -6,6 +6,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SchoolContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -24,6 +25,10 @@ class DashboardController extends Controller
         $data = app(ReportController::class)->data($reportRequest);
         $data['totalIncome'] = Transaction::ofType('income')->sum('amount');
         $data['totalExpense'] = Transaction::ofType('expense')->sum('amount');
+        $data['rekapPerKategori'] = Transaction::select('category_id', DB::raw('COUNT(*) as total_data'), DB::raw('SUM(amount) as total_nominal'))
+                ->groupBy('category_id')
+                ->orderByDesc('total_nominal')
+                ->get();
         $data['balance'] = $data['totalIncome'] - $data['totalExpense'];
         $data['studentCount'] = User::where('role', 'siswa')->whereHas('classMembers', fn ($q) => $q->where('class_id', SchoolContext::forUser(auth()->user())?->id)->where('is_active', true))->count();
         $data['recentTransactions'] = Transaction::orderByDesc('transaction_date')->orderByDesc('id')->limit(5)->get();
