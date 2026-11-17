@@ -164,4 +164,30 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 </script>
 @endpush
+
+<div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mt-6">
+    <h2 class="font-bold text-lg mb-4">Rekap Per Kategori</h2>
+    <table class="w-full text-left">
+        <thead>
+            <tr class="border-b">
+                <th class="py-2">Kategori</th>
+                <th class="py-2">Jumlah Transaksi</th>
+                <th class="py-2">Total Nominal</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($rekapPerKategori ?? [] as $row)
+                <tr class="border-b">
+                    <td class="py-2">{{ $row->category_id }}</td>
+                    <td class="py-2">{{ $row->total_data }} transaksi</td>
+                    <td class="py-2">Rp {{ number_format($row->total_nominal, 0, ',', '.') }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="3" class="py-2 text-gray-500">Belum ada transaksi.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
 @endsection

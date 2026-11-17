@@ -4,6 +4,11 @@
 <div class="cc-page-heading"><div><h1>Buat tagihan kelas</h1><p class="cc-muted">Tagihan ini diberikan kepada {{ $studentCount }} siswa yang terdaftar sekarang.</p></div></div>
 <div class="cc-info">Setiap tagihan dibuat satu per satu untuk periode yang Anda tentukan. Daftar penerima disimpan saat tagihan dibuat; anggota baru tidak otomatis mendapat tagihan lama.</div>
 @if($studentCount === 0)<div class="cc-empty">Belum ada siswa di kelas. Tambahkan siswa terlebih dahulu.</div>@else
+    @if(session('error'))
+        <div class="bg-red-100 border-l-4 border-red-600 text-red-800 p-4 mb-4 rounded">
+            <strong>Peringatan Validasi:</strong> {{ session('error') }}
+        </div>
+    @endif
 <form method="POST" action="{{ route('class-fees.store') }}" class="cc-panel">
     @csrf
     <div class="cc-form-grid">
