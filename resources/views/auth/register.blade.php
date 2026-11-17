@@ -1,0 +1,17 @@
+<x-guest-layout>
+    <h2>Daftar sebagai wali kelas.</h2>
+    <p class="cc-intro">Akun dan kelas Anda akan dibuat bersamaan. Siswa dan bendahara ditambahkan setelah masuk.</p>
+    <form method="POST" action="{{ route('register') }}" class="cc-form">
+        @csrf
+        @foreach(['name' => ['Nama lengkap', 'Nama lengkap Anda', 'name'], 'username' => ['Username', 'Pilih username Anda', 'username'], 'email' => ['Email', 'nama@email.com', 'email']] as $field => $details)
+        <div class="cc-field"><label for="{{ $field }}">{{ $details[0] }} @if($field === 'username')<span>(opsional)</span>@endif</label><input id="{{ $field }}" name="{{ $field }}" type="{{ $field === 'email' ? 'email' : 'text' }}" value="{{ old($field) }}" @required($field !== 'username') @if($field === 'name') autofocus @endif autocomplete="{{ $details[2] }}" maxlength="255" placeholder="{{ $details[1] }}" aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="{{ $field }}-error{{ $field === 'username' ? ' username-help' : '' }}">@if($field === 'username')<p class="cc-helper" id="username-help">Kosongkan untuk mendapatkan username otomatis.</p>@endif<div id="{{ $field }}-error" class="cc-error"><x-input-error :messages="$errors->get($field)" /></div></div>
+        @endforeach
+        <div class="cc-field"><label for="class_name">Nama kelas</label><input id="class_name" name="class_name" type="text" required maxlength="255" value="{{ old('class_name') }}" autocomplete="organization" placeholder="Contoh: XI RPL" aria-invalid="{{ $errors->has('class_name') ? 'true' : 'false' }}" aria-describedby="class_name-error"><div id="class_name-error" class="cc-error"><x-input-error :messages="$errors->get('class_name')" /></div></div>
+        <div class="cc-field"><label for="academic_year">Tahun ajaran</label><input id="academic_year" name="academic_year" type="text" required maxlength="20" value="{{ old('academic_year') }}" placeholder="Contoh: 2026/2027" aria-invalid="{{ $errors->has('academic_year') ? 'true' : 'false' }}" aria-describedby="academic_year-error"><div id="academic_year-error" class="cc-error"><x-input-error :messages="$errors->get('academic_year')" /></div></div>
+        @foreach(['password' => ['Password', 'Buat password minimal 8 karakter'], 'password_confirmation' => ['Konfirmasi password', 'Masukkan kembali password']] as $field => $details)
+        <div class="cc-field"><label for="{{ $field }}">{{ $details[0] }}</label><div class="cc-password"><input id="{{ $field }}" name="{{ $field }}" type="password" required minlength="8" autocomplete="new-password" placeholder="{{ $details[1] }}" data-password-label="{{ strtolower($details[0]) }}" aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="{{ $field }}-error"><button type="button" class="cc-password-toggle" data-toggle-password="{{ $field }}" aria-controls="{{ $field }}" aria-pressed="false" aria-label="Tampilkan {{ strtolower($details[0]) }}">Lihat</button></div><div id="{{ $field }}-error" class="cc-error"><x-input-error :messages="$errors->get($field)" /></div></div>
+        @endforeach
+        <button type="submit" class="cc-submit">Buat akun & kelas <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12h16m-6-6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </form>
+    <p class="cc-bottom">Sudah punya akun? <a href="{{ route('login') }}">Masuk di sini</a></p>
+</x-guest-layout>

@@ -1,0 +1,61 @@
+kind: wasmer.io/App.v0
+name: cashclass
+app_id: da_neGIvtaUgPr7
+owner: zidmuh17
+package: .
+env:
+  APP_NAME: CashClass
+  APP_ENV: production
+  APP_DEBUG: 'false'
+  APP_URL: https://cashclass.wasmer.app
+  APP_LOCALE: id
+  APP_FALLBACK_LOCALE: en
+  APP_FAKER_LOCALE: id_ID
+  BCRYPT_ROUNDS: '12'
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: warning
+  CACHE_STORE: file
+  SESSION_DRIVER: database
+  SESSION_LIFETIME: '120'
+  QUEUE_CONNECTION: sync
+  FILESYSTEM_DISK: public
+  DB_CONNECTION: mysql
+  # Nama database managed milik app ini (lihat: wasmer app database list).
+  # DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD di-inject otomatis oleh Wasmer.
+  DB_DATABASE: db_efd9bae6
+  PHPIX_PHP_THREADS: '4'
+  PORT: '8080'
+capabilities:
+  database:
+    engine: mysql
+volumes:
+- name: cashclass-uploads
+  mount: /app/storage/app/public
+scaling:
+  mode: single_concurrency
+jobs:
+- name: after_deploy
+  trigger: post-deployment
+  action:
+    execute:
+      command: after_deploy
+annotations:
+  anybuild.run/config:
+    composer_build_script: post-update-cmd
+    composer_enable: true
+    name: out
+    node_build_command: npm run build
+    node_install_inputs:
+    - package.json
+    node_package_manager: npm
+    npm_version: '11'
+    php_framework: laravel
+    php_public_dir: public
+    phpix: true
+    commands:
+      start: phpix -S 0.0.0.0:8080 -t public
+  anybuild.run/provider: laravel
+  anybuild.run/version: 0.33.3
+  wasmer.io/version: 7.5.0
+enable_email: true
+enableDatabase: true

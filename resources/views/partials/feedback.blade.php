@@ -1,0 +1,3 @@
+@if(session('error'))<div role="alert" class="cc-notice cc-notice-error">{{ session('error') }}</div>@endif
+@if($errors->any() || $errors->getBag('updatePassword')->any())<div role="alert" class="cc-notice cc-notice-error"><ul>@foreach(array_merge($errors->all(),$errors->getBag('updatePassword')->all()) as $message)<li>{{ $message }}</li>@endforeach</ul></div>@endif
+@if(session('status') || session('success'))<div role="status" class="cc-notice">{{ ['profile-updated'=>'Profil berhasil diperbarui.','password-updated'=>'Password berhasil diperbarui.'][session('status')] ?? session('status',session('success')) }}</div>@endif

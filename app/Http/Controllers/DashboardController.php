@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Transaction;
+use App\Models\User;
+use App\Services\SchoolContext;
+use Illuminate\Http\Request;
+
+class DashboardController extends Controller
+{
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        if ($user->isSiswa()) {
+            return redirect()->route('student.dashboard');
+        }
+        if ($user->isWaliKelas()) {
+            return redirect()->route('walikelas.dashboard');
+        }
+        abort_unless($user->isBendahara(), 403);
+
+        $reportRequest = Request::create('/', 'GET', ['start_date' => now()->subDays(6)->toDateString(), 'end_date' => now()->toDateString()]);
+        $data = app(ReportController::class)->data($reportRequest);
+        $data['totalIncome'] = Transaction::ofType('income')->sum('amount');
+        $data['totalExpense'] = Transaction::ofType('expense')->sum('amount');
+        $data['balance'] = $data['totalIncome'] - $data['totalExpense'];
+        $data['studentCount'] = User::where('role', 'siswa')->whereHas('classMembers', fn ($q) => $q->where('class_id', SchoolContext::forUser(auth()->user())?->id)->where('is_active', true))->count();
+        $data['recentTransactions'] = Transaction::orderByDesc('transaction_date')->orderByDesc('id')->limit(5)->get();
+
+        return view('dashboard', $data);
+    }
+}

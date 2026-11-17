@@ -1,0 +1,18 @@
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.2.12
+Configuration: C:\cashclass\phpunit.xml
+
+
+   PASS  Tests\Feature\CashclassRepairTest
+  ✓ duplicate transaction is rejected before insert                      0.60s  
+
+  Tests:    1 passed (5 assertions)
+  Duration: 0.87s
+
+Time: 00:00.629, Memory: 46.00 MB
+
+Cashclass Repair (Tests\Feature\CashclassRepair)
+ ✔ Duplicate transaction is rejected before insert
+
+OK (1 test, 5 assertions)
