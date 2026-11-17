@@ -71,8 +71,16 @@ class TransactionApiController extends Controller
     public function store(StoreTransactionRequest $request, TransactionService $service): JsonResponse
     {
         try {
+                        $validated = $request->validated();
+            $dup = Transaction::where('user_id', (int) $request->user()->id)
+                ->where('amount', $validated['amount'])
+                ->where('description', $validated['description'] ?? null)
+                ->exists();
+            if ($dup) {
+                return response()->json(['success' => false, 'message' => 'Data duplikat: transaksi yang sama sudah pernah diinput.'], 422);
+}
             $transaction = $service->save($request->validated(), (int) $request->user()->id, $request->file('proof'));
-
+          
             return response()->json(['success' => true, 'message' => 'Transaksi berhasil ditambahkan.', 'data' => $transaction->load(['category', 'user'])], 201);
         } catch (ValidationException|HttpException $e) {
             throw $e;
