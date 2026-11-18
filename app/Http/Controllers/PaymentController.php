@@ -164,9 +164,17 @@ class PaymentController extends Controller
 
     public function proof(PaymentSubmission $payment)
     {
-        abort_unless($payment->proof_image && Storage::disk('public')->exists($payment->proof_image), 404);
+        abort_unless((bool) $payment->proof_image, 404);
 
-        return Storage::disk('public')->response($payment->proof_image);
+        if (Storage::disk('public')->exists($payment->proof_image)) {
+            return Storage::disk('public')->response($payment->proof_image);
+        }
+
+        // Bukti pada data awal memakai berkas contoh yang ikut terdeploy.
+        $fallback = public_path('images/contoh-bukti-transfer.png');
+        abort_unless(is_file($fallback), 404);
+
+        return response()->file($fallback, ['Content-Type' => 'image/png']);
     }
 
     public function refund(Request $request, PaymentSubmission $payment, TransactionService $service)

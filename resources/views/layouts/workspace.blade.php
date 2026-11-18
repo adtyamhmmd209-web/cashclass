@@ -14,7 +14,7 @@
     $icons = ['home'=>'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z','wallet'=>'M20 7H5a2 2 0 0 1 0-4h13v4M3 5v14a2 2 0 0 0 2 2h15V7M20 12h-5v5h5','payment'=>'M3 5h18v14H3V5Zm0 5h18M6 15h4','users'=>'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-4M16 3a4 4 0 0 1 0 8','user'=>'M20 21v-2a8 8 0 0 0-16 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z','report'=>'M6 3h9l4 4v14H5V3Zm3 6h6m-6 4h6m-6 4h4','calendar'=>'M3 5h18v16H3V5Zm0 5h18M7 2v6m10-6v6M7 14h2m3 0h2','bell'=>'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4','settings'=>'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2','support'=>'M4 13V9a8 8 0 0 1 16 0v4M4 10H2v7h4v-7H4Zm16 0h2v7h-4v-7h2Zm0 7c0 4-3 4-6 4'];
 @endphp
 <!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="{{ csrf_token() }}"><title>CashClass — @yield('title','Profil & keamanan')</title>
-@vite(['resources/css/app.css','resources/js/app.js'])<link rel="stylesheet" href="{{ asset('css/cashclass-workspace.css') }}?v=20261028-2">@stack('styles')</head>
+@vite(['resources/css/app.css','resources/js/app.js'])<link rel="stylesheet" href="{{ asset('css/cashclass-workspace.css') }}?v=20261119-1">@stack('styles')</head>
 <body class="cc-workspace"><button type="button" class="workspace-overlay" id="sidebar-overlay" aria-label="Tutup sidebar" hidden></button>
 <aside class="workspace-sidebar" id="sidebar" aria-label="Sidebar CashClass">
 <a class="workspace-brand" href="{{ route($workspaceUser->isSiswa()?'student.dashboard':($workspaceUser->isWaliKelas()?'walikelas.dashboard':'dashboard')) }}">@include('partials.cashclass-logo')</a>
@@ -36,5 +36,14 @@ document.addEventListener('DOMContentLoaded',function(){
  toggle.addEventListener('click',open);overlay.addEventListener('click',close);document.querySelector('[data-sidebar-close]').addEventListener('click',close);
  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();if(e.key==='Tab'&&document.body.classList.contains('cc-sidebar-open')){const list=[...sidebar.querySelectorAll('a,button,input')].filter(x=>x.offsetParent!==null);const first=list[0],last=list[list.length-1];if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();}else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();}}});
  window.addEventListener('resize',function(){if(window.innerWidth>=1024)close();else sidebar.inert=!document.body.classList.contains('cc-sidebar-open');});sidebar.inert=window.innerWidth<1024;
+  document.querySelectorAll('.workspace-content table').forEach(function(table){
+    const labels=[...table.querySelectorAll('thead th')].map(function(th){return th.textContent.trim();});
+    if(!labels.length)return;
+    table.querySelectorAll('tbody tr').forEach(function(row){
+      [...row.children].forEach(function(cell,index){
+        if(labels[index]&&!cell.hasAttribute('data-label'))cell.setAttribute('data-label',labels[index]);
+      });
+    });
+  });
 });
 </script>@stack('scripts')</body></html>

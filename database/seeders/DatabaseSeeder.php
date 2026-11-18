@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         // 1. Buat Bendahara
         $bendahara = User::create([
             'username' => 'bendahara',
+            'nisn' => '7000000011',
             'name' => 'Siti Bendahara',
             'email' => 'bendahara@cashclass.com',
             'password' => Hash::make('bendahara123'),
@@ -24,6 +25,7 @@ class DatabaseSeeder extends Seeder
         // 2. Buat Wali Kelas
         $walikelas = User::create([
             'username' => 'walikelas',
+            'nisn' => '7000000012',
             'name' => 'Pak Budi Santoso',
             'email' => 'walikelas@cashclass.com',
             'password' => Hash::make('walikelas123'),
@@ -34,6 +36,7 @@ class DatabaseSeeder extends Seeder
         // 3. Buat Siswa
         $siswa1 = User::create([
             'username' => 'andi',
+            'nisn' => '7000000013',
             'name' => 'Andi Saputra',
             'email' => 'andi@cashclass.com',
             'password' => Hash::make('andi123'),
@@ -43,6 +46,7 @@ class DatabaseSeeder extends Seeder
 
         $siswa2 = User::create([
             'username' => 'siti',
+            'nisn' => '7000000014',
             'name' => 'Siti Aisyah',
             'email' => 'siti@cashclass.com',
             'password' => Hash::make('siti123'),
@@ -84,7 +88,9 @@ class DatabaseSeeder extends Seeder
             DB::table('categories')->insert(array_merge($category, ['created_at' => now(), 'updated_at' => now()]));
         }
 
+        $this->call(ClassConsolidationSeeder::class);
         $this->call(StudentBulkSeeder::class);
+        $this->call(NisnNormalizationSeeder::class);
         $this->call(AccountCredentialsSeeder::class);
         $this->call(PaymentBulkSeeder::class);
     }

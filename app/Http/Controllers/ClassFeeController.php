@@ -6,6 +6,7 @@ use App\Models\ClassFee;
 use App\Models\ClassMember;
 use App\Models\ClassModel;
 use App\Models\User;
+use App\Notifications\FinanceNotification;
 use App\Services\SchoolContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,8 @@ class ClassFeeController extends Controller
         $class = SchoolContext::requireForUser($request->user());
         $data = $this->validated($request);
 
-        DB::transaction(function () use ($request, $class, $data) {
+        $fee = null;
+        DB::transaction(function () use ($request, $class, $data, &$fee) {
             ClassModel::whereKey($class->id)->lockForUpdate()->firstOrFail();
             $studentIds = ClassMember::where('class_id', $class->id)
                 ->where('is_active', true)
@@ -55,6 +57,8 @@ class ClassFeeController extends Controller
             $fee = ClassFee::create($data + ['class_id' => $class->id, 'created_by' => $request->user()->id]);
             $fee->assignments()->createMany($studentIds->map(fn ($userId) => ['class_id' => $class->id, 'user_id' => $userId])->all());
         });
+
+        $this->notifyStudents($fee, 'Tagihan baru', 'Tagihan "'.$fee->title.'" sebesar Rp '.number_format((float) $fee->amount, 0, ',', '.').' telah dibuat. Jatuh tempo '.$fee->due_date->translatedFormat('d F Y').'.');
 
         return redirect()->route('class-fees.index')->with('status', 'Tagihan dibuat untuk siswa yang terdaftar saat ini.');
     }
@@ -72,7 +76,8 @@ class ClassFeeController extends Controller
         $this->ensureClassOwnership($request, $classFee);
         $data = $this->validated($request);
 
-        DB::transaction(function () use ($classFee, $data) {
+        $fee = null;
+        DB::transaction(function () use ($classFee, $data, &$fee) {
             ClassModel::whereKey($classFee->class_id)->lockForUpdate()->firstOrFail();
             $fee = ClassFee::whereKey($classFee->id)->lockForUpdate()->firstOrFail();
             if ($fee->assignments()->whereHas('payments')->exists()) {
@@ -81,12 +86,15 @@ class ClassFeeController extends Controller
             $fee->update($data);
         });
 
+        $this->notifyStudents($fee, 'Tagihan diperbarui', 'Tagihan "'.$fee->title.'" telah diperbarui menjadi Rp '.number_format((float) $fee->amount, 0, ',', '.').'. Jatuh tempo '.$fee->due_date->translatedFormat('d F Y').'.');
+
         return redirect()->route('class-fees.index')->with('status', 'Tagihan berhasil diperbarui.');
     }
 
     public function destroy(Request $request, ClassFee $classFee)
     {
         $this->ensureClassOwnership($request, $classFee);
+        $recipients = $classFee->assignments()->with('user')->get()->pluck('user')->filter()->all();
         DB::transaction(function () use ($classFee) {
             ClassModel::whereKey($classFee->class_id)->lockForUpdate()->firstOrFail();
             $fee = ClassFee::whereKey($classFee->id)->lockForUpdate()->firstOrFail();
@@ -95,6 +103,8 @@ class ClassFeeController extends Controller
             }
             $fee->delete();
         });
+
+        $this->notifyUsers($recipients, 'Tagihan dihapus', 'Tagihan "'.$classFee->title.'" telah dihapus oleh bendahara.');
 
         return redirect()->route('class-fees.index')->with('status', 'Tagihan berhasil dihapus.');
     }
@@ -108,6 +118,30 @@ class ClassFeeController extends Controller
             'due_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:starts_at'],
             'description' => ['nullable', 'string', 'max:5000'],
         ]);
+    }
+
+    private function notifyStudents(?ClassFee $fee, string $title, string $message): void
+    {
+        if (! $fee) {
+            return;
+        }
+
+        $this->notifyUsers(
+            $fee->assignments()->with('user')->get()->pluck('user')->filter()->all(),
+            $title,
+            $message,
+        );
+    }
+
+    private function notifyUsers(iterable $users, string $title, string $message): void
+    {
+        foreach ($users as $student) {
+            $student->notify(new FinanceNotification([
+                'title' => $title,
+                'message' => $message,
+                'url' => route('student.fees'),
+            ]));
+        }
     }
 
     private function ensureClassOwnership(Request $request, ClassFee $fee): void

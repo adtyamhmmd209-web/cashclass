@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Category;
 use App\Models\Transaction;
+use App\Models\User;
+use App\Notifications\FinanceNotification;
+use App\Services\SchoolContext;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -89,7 +92,11 @@ class TransactionController extends Controller
     public function store(StoreTransactionRequest $request, TransactionService $service)
     {
         try {
-            $service->save($request->validated(), (int) $request->user()->id, $request->file('proof'));
+            $transaction = $service->save($request->validated(), (int) $request->user()->id, $request->file('proof'));
+
+            if ($transaction->type === 'expense') {
+                $this->notifyWaliKelas($request, 'Pengeluaran kas dicatat', 'Pengeluaran "'.$transaction->title.'" sebesar Rp '.number_format((float) $transaction->amount, 0, ',', '.').' telah dicatat di kas kelas.');
+            }
 
             return redirect()->route('transactions.index')->with('success', 'Transaksi berhasil ditambahkan!');
         } catch (ValidationException|HttpException $e) {
@@ -120,7 +127,11 @@ class TransactionController extends Controller
     {
         $transaction = Transaction::findOrFail($id);
         try {
-            $service->save($request->validated(), (int) $request->user()->id, $request->file('proof'), $transaction);
+            $transaction = $service->save($request->validated(), (int) $request->user()->id, $request->file('proof'), $transaction);
+
+            if ($transaction->type === 'expense') {
+                $this->notifyWaliKelas($request, 'Pengeluaran diperbarui', 'Pengeluaran "'.$transaction->title.'" telah diperbarui menjadi Rp '.number_format((float) $transaction->amount, 0, ',', '.').'.');
+            }
 
             return redirect()->route('transactions.index')->with('success', 'Transaksi berhasil diperbarui!');
         } catch (ValidationException|HttpException $e) {
@@ -132,11 +143,18 @@ class TransactionController extends Controller
         }
     }
 
-    public function destroy($id, TransactionService $service)
+    public function destroy(Request $request, $id, TransactionService $service)
     {
         $transaction = Transaction::findOrFail($id);
+        $wasExpense = $transaction->type === 'expense';
+        $expenseTitle = $transaction->title;
+        $expenseAmount = $transaction->amount;
         try {
             $service->delete($transaction);
+
+            if ($wasExpense) {
+                $this->notifyWaliKelas($request, 'Pengeluaran dihapus', 'Pengeluaran "'.$expenseTitle.'" sebesar Rp '.number_format((float) $expenseAmount, 0, ',', '.').' telah dihapus dari kas kelas.');
+            }
 
             return redirect()->route('transactions.index')->with('success', 'Transaksi berhasil dihapus!');
         } catch (ValidationException|HttpException $e) {
@@ -146,6 +164,21 @@ class TransactionController extends Controller
 
             return back()->with('error', 'Gagal menghapus transaksi. Silakan coba lagi atau kirim laporan error.');
         }
+    }
+
+    private function notifyWaliKelas(Request $request, string $title, string $message): void
+    {
+        $class = SchoolContext::forUser($request->user());
+        if (! $class || ! $class->teacher_id) {
+            return;
+        }
+
+        User::where('role', 'wali_kelas')->whereKey($class->teacher_id)->first()
+            ?->notify(new FinanceNotification([
+                'title' => $title,
+                'message' => $message,
+                'url' => route('walikelas.reports'),
+            ]));
     }
 
     public function proof($id)
