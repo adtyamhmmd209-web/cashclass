@@ -1,13 +1,13 @@
 kind: wasmer.io/App.v0
 name: cashclass
-app_id: da_neGIvtaUgPr7
-owner: zidmuh17
+app_id: da_nYYILtXU43g4
+owner: adtyamhmmd209-web
 package: .
 env:
   APP_NAME: CashClass
   APP_ENV: production
   APP_DEBUG: 'false'
-  APP_URL: https://cashclass.wasmer.app
+  APP_URL: https://cashclass-adtyamhmmd209-web.wasmer.app
   APP_LOCALE: id
   APP_FALLBACK_LOCALE: en
   APP_FAKER_LOCALE: id_ID
@@ -20,9 +20,8 @@ env:
   QUEUE_CONNECTION: sync
   FILESYSTEM_DISK: public
   DB_CONNECTION: mysql
-  # Nama database managed milik app ini (lihat: wasmer app database list).
   # DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD di-inject otomatis oleh Wasmer.
-  DB_DATABASE: db_efd9bae6
+  DB_DATABASE: db_172515b1
   PHPIX_PHP_THREADS: '4'
   PORT: '8080'
 capabilities:
@@ -54,6 +53,7 @@ annotations:
     phpix: true
     commands:
       start: phpix -S 0.0.0.0:8080 -t public
+      after_deploy: php artisan migrate --force
   anybuild.run/provider: laravel
   anybuild.run/version: 0.33.3
   wasmer.io/version: 7.5.0
