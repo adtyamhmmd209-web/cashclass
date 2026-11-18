@@ -7,6 +7,7 @@ use App\Models\ClassFeeAssignment;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SchoolContext;
+use App\Notifications\AnnouncementNotification;
 use Illuminate\Http\Request;
 
 class WaliKelasController extends Controller
@@ -74,7 +75,16 @@ class WaliKelasController extends Controller
             'content' => ['required', 'string', 'max:10000'],
             'is_pinned' => ['sometimes', 'boolean'],
         ]);
-        Announcement::create($data + ['class_id' => $class->id, 'user_id' => $request->user()->id]);
+        $announcement = Announcement::create($data + ['class_id' => $class->id, 'user_id' => $request->user()->id]);
+
+        $students = User::where('role', 'siswa')->whereHas('classMembers', fn ($q) => $q->where('class_id', $class->id)->where('is_active', true))->get();
+        foreach ($students as $student) {
+            $student->notify(new AnnouncementNotification([
+                'title' => 'Pengumuman baru',
+                'message' => $announcement->title,
+                'url' => route('student.dashboard'),
+            ]));
+        }
 
         return back()->with('status', 'Data berhasil disimpan.');
     }

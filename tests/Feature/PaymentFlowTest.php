@@ -160,4 +160,23 @@ class PaymentFlowTest extends TestCase
         $this->patch('/settings/payment-accounts/'.$account->id, ['is_active' => false])->assertRedirect();
         $this->assertFalse($account->fresh()->is_active);
     }
+
+    public function test_cash_payment_can_be_refunded_and_balance_is_reduced(): void
+    {
+        $data = ['user_id' => $this->group['student']->id, 'date' => now()->toDateString(), 'amount' => 20000, 'cash_received' => 50000, 'description' => 'Kas tunai', 'submission_key' => (string) Str::uuid()];
+        $this->actingAs($this->group['treasurer'])->post('/payments/cash', $data)->assertRedirect('/payments');
+
+        $payment = PaymentSubmission::firstOrFail();
+        $this->assertSame('20000.00', $this->group['class']->fresh()->current_balance);
+
+        $this->patch('/payments/'.$payment->id.'/refund')->assertRedirect();
+
+        $payment->refresh();
+        $transaction = $payment->transaction()->firstOrFail();
+        $this->assertSame('refunded', $payment->status);
+        $this->assertSame('expense', $transaction->type);
+        $this->assertSame('Pengembalian Kas', $transaction->category->name);
+        $this->assertSame('0.00', $this->group['class']->fresh()->current_balance);
+        $this->actingAs($this->group['student'])->get('/student/transactions')->assertOk()->assertSee('Dikembalikan')->assertSee('Pengeluaran');
+    }
 }

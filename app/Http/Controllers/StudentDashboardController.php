@@ -9,7 +9,9 @@ use App\Models\LessonSchedule;
 use App\Models\PaymentAccount;
 use App\Models\PaymentSubmission;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Services\SchoolContext;
+use App\Notifications\PaymentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -130,6 +132,14 @@ class StudentDashboardController extends Controller
                     'payment_provider' => $account->provider, 'destination_number' => $account->account_number, 'destination_holder' => $account->account_holder,
                     'submission_key' => $data['submission_key'], 'class_fee_assignment_id' => $feeAssignment?->id,
                 ]);
+                if ($class->treasurer_id) {
+                    $treasurer = User::find($class->treasurer_id);
+                    $treasurer?->notify(new PaymentNotification([
+                        'title' => 'Pembayaran baru menunggu verifikasi',
+                        'message' => $request->user()->name.' mengirim pembayaran Rp '.number_format($data['amount'], 0, ',', '.').' melalui '.($data['method'] === 'bank' ? 'transfer bank' : 'e-wallet').'.',
+                        'url' => route('payments.index'),
+                    ]));
+                }
             });
         } catch (ValidationException $e) {
             if ($proof) {

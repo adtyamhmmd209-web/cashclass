@@ -28,7 +28,7 @@ class StudentController extends Controller
             ->orderBy('name');
         if ($request->filled('search')) {
             $search = '%'.$request->input('search').'%';
-            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('username', 'like', $search)->orWhere('email', 'like', $search));
+            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('nisn', 'like', $search)->orWhere('username', 'like', $search)->orWhere('email', 'like', $search));
         }
 
         return view('students.index', ['students' => $query->paginate(15)->withQueryString(), 'class' => $class]);
@@ -56,14 +56,21 @@ class StudentController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'nisn' => ['required', 'string', 'size:10', 'regex:/^[0-9]+$/', Rule::unique('users', 'nisn')->ignore($student->id)],
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($student->id)],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')->ignore($student->id)],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['nullable', 'confirmed', Password::defaults()],
+        ], [
+            'nisn.required' => 'NISN wajib diisi.',
+            'nisn.size' => 'NISN harus terdiri dari 10 digit.',
+            'nisn.regex' => 'NISN hanya boleh berisi angka.',
+            'nisn.unique' => 'NISN sudah digunakan oleh akun lain.',
         ]);
 
         $attributes = [
             'name' => $data['name'],
+            'nisn' => $data['nisn'],
             'username' => $data['username'],
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,

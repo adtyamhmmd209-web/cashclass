@@ -8,6 +8,7 @@ use App\Models\PaymentSubmission;
 use App\Models\User;
 use App\Services\SchoolContext;
 use App\Services\TransactionService;
+use App\Notifications\PaymentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +21,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $request->validate(['search' => ['nullable', 'string', 'max:255'], 'status' => ['nullable', 'in:all,pending,approved,rejected'], 'method' => ['nullable', 'in:all,bank,e_wallet,cash']]);
+        $request->validate(['search' => ['nullable', 'string', 'max:255'], 'status' => ['nullable', 'in:all,pending,approved,rejected,refunded'], 'method' => ['nullable', 'in:all,bank,e_wallet,cash']]);
         $query = PaymentSubmission::with(['user', 'class', 'transaction', 'classFeeAssignment.classFee'])->latest();
         if ($request->filled('search')) {
             $query->whereHas('user', fn ($q) => $q->where('name', 'like', '%'.$request->input('search').'%'));
@@ -105,6 +106,13 @@ class PaymentController extends Controller
             PaymentSubmission::create(['class_id' => $class->id, 'user_id' => $student->id, 'class_fee_assignment_id' => $feeAssignment?->id, 'payment_date' => $data['date'], 'amount' => $data['amount'], 'description' => $data['description'], 'method' => 'cash', 'status' => 'approved', 'reviewed_by' => $request->user()->id, 'transaction_id' => $transaction->id, 'submission_key' => $data['submission_key'], 'cash_received' => $data['cash_received'], 'cash_change' => $data['cash_change']]);
         });
 
+        $cashPayment = PaymentSubmission::withoutGlobalScopes()->where('submission_key', $data['submission_key'])->first();
+        $cashPayment?->user->notify(new PaymentNotification([
+            'title' => 'Pembayaran cash dicatat',
+            'message' => 'Pembayaran tunai Rp '.number_format($cashPayment->amount, 0, ',', '.').' telah dicatat dan masuk ke kas kelas.',
+            'url' => route('student.transactions'),
+        ]));
+
         return redirect()->route('payments.index')->with('status', 'Pembayaran cash dicatat dan langsung masuk kas kelas.');
     }
 
@@ -144,6 +152,13 @@ class PaymentController extends Controller
             return back()->with('error', 'Pembayaran belum berhasil diproses. Silakan coba lagi.');
         }
 
+        $payment->refresh();
+        $payment->user->notify(new PaymentNotification([
+            'title' => $data['status'] === 'approved' ? 'Pembayaran disetujui' : 'Pembayaran ditolak',
+            'message' => 'Pembayaran Rp '.number_format($payment->amount, 0, ',', '.').' berstatus '.($data['status'] === 'approved' ? 'disetujui dan telah masuk ke kas.' : 'ditolak oleh bendahara.'),
+            'url' => route('student.transactions'),
+        ]));
+
         return back()->with('status', $data['status'] === 'approved' ? 'Pembayaran disetujui dan dicatat sebagai pemasukan.' : 'Pembayaran ditolak.');
     }
 
@@ -152,6 +167,56 @@ class PaymentController extends Controller
         abort_unless($payment->proof_image && Storage::disk('public')->exists($payment->proof_image), 404);
 
         return Storage::disk('public')->response($payment->proof_image);
+    }
+
+    public function refund(Request $request, PaymentSubmission $payment, TransactionService $service)
+    {
+        $class = SchoolContext::requireForUser($request->user());
+
+        try {
+            DB::transaction(function () use ($request, $payment, $service, $class) {
+                $payment = PaymentSubmission::withoutGlobalScopes()->whereKey($payment->id)
+                    ->where('class_id', $class->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                abort_unless($payment->method === 'cash', 409, 'Pengembalian hanya tersedia untuk pembayaran cash.');
+                abort_unless($payment->status === 'approved', 409, 'Pembayaran cash belum disetujui atau sudah dikembalikan.');
+                abort_unless($payment->transaction_id, 409, 'Transaksi pembayaran cash tidak ditemukan.');
+
+                $originalTransaction = $payment->transaction()->lockForUpdate()->firstOrFail();
+                abort_unless($originalTransaction->class_id === $class->id && $originalTransaction->type === 'income', 409, 'Transaksi pembayaran tidak dapat dikembalikan.');
+
+                $refundTransaction = $service->save([
+                    'date' => now()->toDateString(),
+                    'amount' => $payment->amount,
+                    'type' => 'expense',
+                    'category' => 'Pengembalian Kas',
+                    'description' => 'Pengembalian cash - '.$payment->user->name.' - '.$payment->description,
+                ], $request->user()->id, null, null, $class->id);
+
+                $payment->update([
+                    'status' => 'refunded',
+                    'reviewed_by' => $request->user()->id,
+                    'transaction_id' => $refundTransaction->id,
+                ]);
+            });
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Pembayaran cash belum berhasil dikembalikan. Silakan coba lagi.');
+        }
+
+        $payment->refresh();
+        $payment->user->notify(new PaymentNotification([
+            'title' => 'Pembayaran cash dikembalikan',
+            'message' => 'Pengembalian Rp '.number_format($payment->amount, 0, ',', '.').' telah dicatat dan saldo kas dikurangi.',
+            'url' => route('student.transactions'),
+        ]));
+
+        return back()->with('status', 'Pengembalian cash dicatat. Saldo kas telah dikurangi dan status pembayaran diperbarui.');
     }
 
     private function toMinor($value): int

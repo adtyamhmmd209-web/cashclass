@@ -12,7 +12,7 @@
 </div>
 
 <form method="GET" class="cc-panel" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-    <input name="search" aria-label="Cari siswa atau bendahara" placeholder="Cari nama, username atau email" value="{{ request('search') }}" class="rounded-lg border-gray-300" style="flex:1;min-width:220px">
+    <input name="search" aria-label="Cari siswa atau bendahara" placeholder="Cari nama, NISN, username atau email" value="{{ request('search') }}" class="rounded-lg border-gray-300" style="flex:1;min-width:220px">
     <button type="submit" class="cc-button-primary">Cari</button>
 </form>
 
@@ -22,6 +22,7 @@
             <tr class="text-left">
                 <th class="p-3">Nama</th>
                 <th class="p-3">Peran</th>
+                <th class="p-3">NISN</th>
                 <th class="p-3">Username</th>
                 <th class="p-3">Email</th>
                 <th class="p-3">Kelas</th>
@@ -33,6 +34,7 @@
                 <tr class="border-t">
                     <td class="p-3">{{ $student->name }}</td>
                     <td class="p-3"><span class="cc-badge">{{ $student->role === 'bendahara' ? 'Bendahara' : 'Siswa' }}</span></td>
+                    <td class="p-3">{{ $student->nisn ?? '-' }}</td>
                     <td class="p-3">{{ $student->username }}</td>
                     <td class="p-3">{{ $student->email }}</td>
                     <td class="p-3">{{ $class?->name ?? '-' }}</td>

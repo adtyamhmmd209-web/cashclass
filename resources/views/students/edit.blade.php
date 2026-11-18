@@ -17,6 +17,10 @@
             <input name="name" required maxlength="255" value="{{ old('name', $student->name) }}" autocomplete="name">
             @error('name')<span class="cc-error">{{ $message }}</span>@enderror
         </label>
+        <label>NISN
+            <input name="nisn" required minlength="10" maxlength="10" inputmode="numeric" pattern="[0-9]{10}" value="{{ old('nisn', $student->nisn) }}" placeholder="10 digit angka">
+            @error('nisn')<span class="cc-error">{{ $message }}</span>@enderror
+        </label>
         <label>Username
             <input name="username" required maxlength="255" value="{{ old('username', $student->username) }}" autocomplete="off">
             @error('username')<span class="cc-error">{{ $message }}</span>@enderror

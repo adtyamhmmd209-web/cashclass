@@ -13,6 +13,7 @@ use App\Http\Controllers\StudentDashboardController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WaliKelasController;
 use App\Http\Controllers\WaliAccountController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 // Landing page
@@ -50,6 +51,7 @@ Route::middleware(['auth', 'role:bendahara'])->prefix('payments')->name('payment
     Route::get('/', [PaymentController::class, 'index'])->name('index');
     Route::post('/cash', [PaymentController::class, 'storeCash'])->name('cash.store');
     Route::patch('/{payment}', [PaymentController::class, 'review'])->name('review');
+    Route::patch('/{payment}/refund', [PaymentController::class, 'refund'])->name('cash.refund');
     Route::get('/{payment}/proof', [PaymentController::class, 'proof'])->name('proof');
 });
 
@@ -140,4 +142,13 @@ Route::post('/error-reports', [ErrorReportController::class, 'store'])->middlewa
 Route::middleware(['auth', 'role:bendahara'])->group(function () {
     Route::get('/error-reports', [ErrorReportController::class, 'index'])->name('error-reports.index');
     Route::patch('/error-reports/{id}', [ErrorReportController::class, 'update'])->whereUuid('id')->name('error-reports.update');
+});
+
+// Routes Notifikasi
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::get('/{notification}', [NotificationController::class, 'show'])->name('show');
+    Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+    Route::patch('/read-all', [NotificationController::class, 'readAll'])->name('read-all');
+    Route::get('/{notification}', [NotificationController::class, 'read'])->name('read');
 });

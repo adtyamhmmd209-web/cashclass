@@ -43,16 +43,23 @@ class WaliAccountController extends Controller
         $data = $request->validate([
             'account_type' => ['required', Rule::in(['siswa', 'bendahara'])],
             'name' => ['required', 'string', 'max:255'],
+            'nisn' => ['required', 'string', 'size:10', 'regex:/^[0-9]+$/', 'unique:users,nisn'],
             'username' => ['required', 'string', 'max:255', 'unique:users'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'nisn.required' => 'NISN wajib diisi.',
+            'nisn.size' => 'NISN harus terdiri dari 10 digit.',
+            'nisn.regex' => 'NISN hanya boleh berisi angka.',
+            'nisn.unique' => 'NISN sudah digunakan oleh akun lain.',
         ]);
 
         DB::transaction(function () use ($data, $class) {
             $lockedClass = ClassModel::whereKey($class->id)->lockForUpdate()->firstOrFail();
             $user = User::create([
                 'name' => $data['name'],
+                'nisn' => $data['nisn'],
                 'username' => $data['username'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
