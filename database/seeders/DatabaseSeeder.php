@@ -93,5 +93,6 @@ class DatabaseSeeder extends Seeder
         $this->call(NisnNormalizationSeeder::class);
         $this->call(AccountCredentialsSeeder::class);
         $this->call(PaymentBulkSeeder::class);
+        $this->call(NotificationBackfillSeeder::class);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\ClassFeeAssignment;
 use App\Models\ClassModel;
 use App\Models\PaymentSubmission;
 use App\Models\User;
+use App\Services\ClassNotifier;
 use App\Services\SchoolContext;
 use App\Services\TransactionService;
 use App\Notifications\PaymentNotification;
@@ -107,11 +108,14 @@ class PaymentController extends Controller
         });
 
         $cashPayment = PaymentSubmission::withoutGlobalScopes()->where('submission_key', $data['submission_key'])->first();
-        $cashPayment?->user->notify(new PaymentNotification([
-            'title' => 'Pembayaran cash dicatat',
-            'message' => 'Pembayaran tunai Rp '.number_format($cashPayment->amount, 0, ',', '.').' telah dicatat dan masuk ke kas kelas.',
-            'url' => route('student.transactions'),
-        ]));
+        if ($cashPayment) {
+            $cashPayment->user->notify(new PaymentNotification([
+                'title' => 'Pembayaran cash dicatat',
+                'message' => 'Pembayaran tunai Rp '.number_format($cashPayment->amount, 0, ',', '.').' telah dicatat dan masuk ke kas kelas.',
+                'url' => route('student.transactions'),
+            ]));
+            $this->notifyWaliKelas($class, 'Pembayaran cash dicatat', $cashPayment->user->name.' membayar tunai Rp '.number_format($cashPayment->amount, 0, ',', '.').' yang telah masuk ke kas kelas.');
+        }
 
         return redirect()->route('payments.index')->with('status', 'Pembayaran cash dicatat dan langsung masuk kas kelas.');
     }
@@ -153,11 +157,14 @@ class PaymentController extends Controller
         }
 
         $payment->refresh();
+        $title = $data['status'] === 'approved' ? 'Pembayaran disetujui' : 'Pembayaran ditolak';
+        $message = 'Pembayaran Rp '.number_format($payment->amount, 0, ',', '.').' berstatus '.($data['status'] === 'approved' ? 'disetujui dan telah masuk ke kas.' : 'ditolak oleh bendahara.');
         $payment->user->notify(new PaymentNotification([
-            'title' => $data['status'] === 'approved' ? 'Pembayaran disetujui' : 'Pembayaran ditolak',
-            'message' => 'Pembayaran Rp '.number_format($payment->amount, 0, ',', '.').' berstatus '.($data['status'] === 'approved' ? 'disetujui dan telah masuk ke kas.' : 'ditolak oleh bendahara.'),
+            'title' => $title,
+            'message' => $message,
             'url' => route('student.transactions'),
         ]));
+        $this->notifyWaliKelas(ClassModel::findOrFail($payment->class_id), $title, $payment->user->name.' - '.$message);
 
         return back()->with('status', $data['status'] === 'approved' ? 'Pembayaran disetujui dan dicatat sebagai pemasukan.' : 'Pembayaran ditolak.');
     }
@@ -218,13 +225,20 @@ class PaymentController extends Controller
         }
 
         $payment->refresh();
+        $message = 'Pengembalian Rp '.number_format($payment->amount, 0, ',', '.').' telah dicatat dan saldo kas dikurangi.';
         $payment->user->notify(new PaymentNotification([
             'title' => 'Pembayaran cash dikembalikan',
-            'message' => 'Pengembalian Rp '.number_format($payment->amount, 0, ',', '.').' telah dicatat dan saldo kas dikurangi.',
+            'message' => $message,
             'url' => route('student.transactions'),
         ]));
+        $this->notifyWaliKelas($class, 'Pembayaran cash dikembalikan', $payment->user->name.' - '.$message);
 
         return back()->with('status', 'Pengembalian cash dicatat. Saldo kas telah dikurangi dan status pembayaran diperbarui.');
+    }
+
+    private function notifyWaliKelas(ClassModel $class, string $title, string $message): void
+    {
+        (new ClassNotifier)->waliKelas($class, $title, $message, route('walikelas.reports'));
     }
 
     private function toMinor($value): int

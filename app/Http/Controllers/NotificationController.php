@@ -18,9 +18,16 @@ class NotificationController extends Controller
         $item = $request->user()->notifications()->whereKey($notification)->firstOrFail();
         $item->markAsRead();
 
-        $url = $item->data['url'] ?? route('notifications.index');
+        // URL notifikasi lama bisa menunjuk ke host deployment lain (atau localhost).
+        // Selalu arahkan kembali ke host yang sedang dipakai agar tombol "Lihat"
+        // tidak membuka alamat yang salah.
+        $target = $item->data['url'] ?? '/notifications';
+        $parts = parse_url($target);
+        if (is_array($parts) && isset($parts['path'])) {
+            $target = $request->root().$parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
+        }
 
-        return redirect($url);
+        return redirect($target);
     }
 
     public function readAll(Request $request)

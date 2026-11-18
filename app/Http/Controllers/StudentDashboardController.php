@@ -10,6 +10,7 @@ use App\Models\PaymentAccount;
 use App\Models\PaymentSubmission;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\ClassNotifier;
 use App\Services\SchoolContext;
 use App\Notifications\PaymentNotification;
 use Illuminate\Http\Request;
@@ -132,14 +133,16 @@ class StudentDashboardController extends Controller
                     'payment_provider' => $account->provider, 'destination_number' => $account->account_number, 'destination_holder' => $account->account_holder,
                     'submission_key' => $data['submission_key'], 'class_fee_assignment_id' => $feeAssignment?->id,
                 ]);
+                $methodLabel = $data['method'] === 'bank' ? 'transfer bank' : 'e-wallet';
+                $message = $request->user()->name.' mengirim pembayaran Rp '.number_format($data['amount'], 0, ',', '.').' melalui '.$methodLabel.'.';
                 if ($class->treasurer_id) {
-                    $treasurer = User::find($class->treasurer_id);
-                    $treasurer?->notify(new PaymentNotification([
+                    User::find($class->treasurer_id)?->notify(new PaymentNotification([
                         'title' => 'Pembayaran baru menunggu verifikasi',
-                        'message' => $request->user()->name.' mengirim pembayaran Rp '.number_format($data['amount'], 0, ',', '.').' melalui '.($data['method'] === 'bank' ? 'transfer bank' : 'e-wallet').'.',
+                        'message' => $message,
                         'url' => route('payments.index'),
                     ]));
                 }
+                (new ClassNotifier)->waliKelas($class, 'Pembayaran baru menunggu verifikasi', $message, route('walikelas.reports'));
             });
         } catch (ValidationException $e) {
             if ($proof) {

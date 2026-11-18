@@ -7,6 +7,7 @@ use App\Models\ClassMember;
 use App\Models\ClassModel;
 use App\Models\User;
 use App\Notifications\FinanceNotification;
+use App\Services\ClassNotifier;
 use App\Services\SchoolContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -58,7 +59,9 @@ class ClassFeeController extends Controller
             $fee->assignments()->createMany($studentIds->map(fn ($userId) => ['class_id' => $class->id, 'user_id' => $userId])->all());
         });
 
-        $this->notifyStudents($fee, 'Tagihan baru', 'Tagihan "'.$fee->title.'" sebesar Rp '.number_format((float) $fee->amount, 0, ',', '.').' telah dibuat. Jatuh tempo '.$fee->due_date->translatedFormat('d F Y').'.');
+        $message = 'Tagihan "'.$fee->title.'" sebesar Rp '.number_format((float) $fee->amount, 0, ',', '.').' telah dibuat. Jatuh tempo '.$fee->due_date->translatedFormat('d F Y').'.';
+        $this->notifyStudents($fee, 'Tagihan baru', $message);
+        (new ClassNotifier)->waliKelas($class, 'Tagihan baru', $message, route('walikelas.reports'));
 
         return redirect()->route('class-fees.index')->with('status', 'Tagihan dibuat untuk siswa yang terdaftar saat ini.');
     }
@@ -86,7 +89,9 @@ class ClassFeeController extends Controller
             $fee->update($data);
         });
 
-        $this->notifyStudents($fee, 'Tagihan diperbarui', 'Tagihan "'.$fee->title.'" telah diperbarui menjadi Rp '.number_format((float) $fee->amount, 0, ',', '.').'. Jatuh tempo '.$fee->due_date->translatedFormat('d F Y').'.');
+        $message = 'Tagihan "'.$fee->title.'" telah diperbarui menjadi Rp '.number_format((float) $fee->amount, 0, ',', '.').'. Jatuh tempo '.$fee->due_date->translatedFormat('d F Y').'.';
+        $this->notifyStudents($fee, 'Tagihan diperbarui', $message);
+        (new ClassNotifier)->waliKelas(ClassModel::findOrFail($fee->class_id), 'Tagihan diperbarui', $message, route('walikelas.reports'));
 
         return redirect()->route('class-fees.index')->with('status', 'Tagihan berhasil diperbarui.');
     }
@@ -104,7 +109,9 @@ class ClassFeeController extends Controller
             $fee->delete();
         });
 
-        $this->notifyUsers($recipients, 'Tagihan dihapus', 'Tagihan "'.$classFee->title.'" telah dihapus oleh bendahara.');
+        $message = 'Tagihan "'.$classFee->title.'" telah dihapus oleh bendahara.';
+        $this->notifyUsers($recipients, 'Tagihan dihapus', $message);
+        (new ClassNotifier)->waliKelas(ClassModel::findOrFail($classFee->class_id), 'Tagihan dihapus', $message, route('walikelas.reports'));
 
         return redirect()->route('class-fees.index')->with('status', 'Tagihan berhasil dihapus.');
     }

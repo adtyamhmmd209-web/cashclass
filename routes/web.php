@@ -147,8 +147,6 @@ Route::middleware(['auth', 'role:bendahara'])->group(function () {
 // Routes Notifikasi
 Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
     Route::get('/', [NotificationController::class, 'index'])->name('index');
-    Route::get('/{notification}', [NotificationController::class, 'show'])->name('show');
-    Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
     Route::patch('/read-all', [NotificationController::class, 'readAll'])->name('read-all');
     Route::get('/{notification}', [NotificationController::class, 'read'])->name('read');
 });

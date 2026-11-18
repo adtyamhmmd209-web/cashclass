@@ -18,6 +18,12 @@ class PaymentNotification extends Notification
 
     public function toDatabase(object $notifiable): array
     {
-        return $this->payload;
+        $payload = $this->payload;
+        $path = parse_url($payload['url'] ?? '', PHP_URL_PATH);
+        if (is_string($path) && $path !== '') {
+            $payload['url'] = $path;
+        }
+
+        return $payload;
     }
 }
