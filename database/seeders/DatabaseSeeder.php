@@ -83,5 +83,7 @@ class DatabaseSeeder extends Seeder
         foreach ($categories as $category) {
             DB::table('categories')->insert(array_merge($category, ['created_at' => now(), 'updated_at' => now()]));
         }
+
+        $this->call(StudentBulkSeeder::class);
     }
 }

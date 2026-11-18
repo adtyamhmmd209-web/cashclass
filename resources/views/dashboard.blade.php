@@ -73,7 +73,7 @@
     <!-- Chart -->
     <div class="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
         <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg font-bold text-gray-800">Grafik Arus Kas (7 Hari Terakhir)</h2>
+            <h2 class="text-lg font-bold text-gray-800">Grafik Arus Kas ({{ $chartPeriodLabel }})</h2>
             <div class="flex items-center gap-4 text-xs">
                 <div class="flex items-center gap-1.5">
                     <span class="w-3 h-3 bg-green-500 rounded-full"></span>

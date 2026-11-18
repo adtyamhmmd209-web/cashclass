@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Models\Transaction;
 use App\Services\TransactionService;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -71,16 +73,19 @@ class TransactionApiController extends Controller
     public function store(StoreTransactionRequest $request, TransactionService $service): JsonResponse
     {
         try {
-                        $validated = $request->validated();
+            $validated = $request->validated();
             $dup = Transaction::where('user_id', (int) $request->user()->id)
                 ->where('amount', $validated['amount'])
                 ->where('description', $validated['description'] ?? null)
                 ->exists();
             if ($dup) {
-                return response()->json(['success' => false, 'message' => 'Data duplikat: transaksi yang sama sudah pernah diinput.'], 422);
-}
-            $transaction = $service->save($request->validated(), (int) $request->user()->id, $request->file('proof'));
-          
+                throw ValidationException::withMessages([
+                    'description' => 'Data duplikat: transaksi yang sama sudah pernah diinput.',
+                ]);
+            }
+
+            $transaction = $service->save($validated, (int) $request->user()->id, $request->file('proof'));
+
             return response()->json(['success' => true, 'message' => 'Transaksi berhasil ditambahkan.', 'data' => $transaction->load(['category', 'user'])], 201);
         } catch (ValidationException|HttpException $e) {
             throw $e;
@@ -137,25 +142,25 @@ class TransactionApiController extends Controller
         $balance = $totalIncome - $totalExpense;
         $totalTransactions = Transaction::count();
 
-        // Data grafik 7 hari terakhir
+        // Grafik mencakup seluruh riwayat kas sejak transaksi pertama sampai hari ini.
+        $earliestTransaction = Transaction::min('transaction_date');
+        $chartStart = $earliestTransaction
+            ? Carbon::parse($earliestTransaction)->max(now()->subYear())
+            : now()->subDays(6);
+        $chartEnd = now();
+
+        $records = Transaction::whereBetween('transaction_date', [$chartStart->toDateString(), $chartEnd->toDateString()])
+            ->get(['transaction_date', 'type', 'amount']);
+        $days = $records->groupBy(fn ($row) => $row->transaction_date->toDateString());
+
         $chartData = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
-            $label = now()->subDays($i)->format('d M');
-
-            $income = Transaction::ofType('income')
-                ->where('transaction_date', $date)
-                ->sum('amount');
-
-            $expense = Transaction::ofType('expense')
-                ->where('transaction_date', $date)
-                ->sum('amount');
-
+        foreach (CarbonPeriod::create($chartStart->toDateString(), $chartEnd->toDateString()) as $date) {
+            $rows = $days->get($date->toDateString(), collect());
             $chartData[] = [
-                'date' => $date,
-                'label' => $label,
-                'income' => (float) $income,
-                'expense' => (float) $expense,
+                'date' => $date->toDateString(),
+                'label' => $date->format('d M'),
+                'income' => (float) $rows->where('type', 'income')->sum('amount'),
+                'expense' => (float) $rows->where('type', 'expense')->sum('amount'),
             ];
         }
 

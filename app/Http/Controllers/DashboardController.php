@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\SchoolContext;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -21,8 +22,19 @@ class DashboardController extends Controller
         }
         abort_unless($user->isBendahara(), 403);
 
-        $reportRequest = Request::create('/', 'GET', ['start_date' => now()->subDays(6)->toDateString(), 'end_date' => now()->toDateString()]);
+        // Grafik menampilkan seluruh riwayat kas sejak transaksi pertama sampai hari ini.
+        $earliestTransaction = Transaction::min('transaction_date');
+        $chartStart = $earliestTransaction
+            ? Carbon::parse($earliestTransaction)->max(now()->subYear())
+            : now()->subDays(6);
+        $chartEnd = now();
+
+        $reportRequest = Request::create('/', 'GET', [
+            'start_date' => $chartStart->toDateString(),
+            'end_date' => $chartEnd->toDateString(),
+        ]);
         $data = app(ReportController::class)->data($reportRequest);
+        $data['chartPeriodLabel'] = $chartStart->format('d M Y').' – '.$chartEnd->format('d M Y');
         $data['totalIncome'] = Transaction::ofType('income')->sum('amount');
         $data['totalExpense'] = Transaction::ofType('expense')->sum('amount');
         $data['rekapPerKategori'] = Transaction::select('category_id', DB::raw('COUNT(*) as total_data'), DB::raw('SUM(amount) as total_nominal'))

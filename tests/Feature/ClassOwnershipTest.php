@@ -23,6 +23,7 @@ class ClassOwnershipTest extends TestCase
             'account_type' => 'bendahara',
             'name' => 'Bendahara Baru',
             'username' => 'bendahara-baru',
+            'nisn' => '9000000001',
             'email' => 'bendahara-baru@example.test',
             'password' => 'password',
             'password_confirmation' => 'password',
@@ -97,6 +98,7 @@ class ClassOwnershipTest extends TestCase
             'account_type' => 'siswa',
             'name' => 'Siswa Tambahan',
             'username' => 'siswa-tambahan',
+            'nisn' => '9000000002',
             'email' => 'tambahan@example.test',
             'password' => 'password',
             'password_confirmation' => 'password',
@@ -142,6 +144,7 @@ class ClassOwnershipTest extends TestCase
         $this->put('/students/'.$group['student']->id, [
             'name' => 'Siswa Diperbarui',
             'username' => 'siswa-diperbarui',
+            'nisn' => '9000000003',
             'email' => 'siswa-diperbarui@example.test',
             'phone' => '08123456789',
         ])->assertRedirect('/students');
@@ -155,6 +158,7 @@ class ClassOwnershipTest extends TestCase
         $this->actingAs($group['treasurer'])->put('/students/'.$group['student']->id, [
             'name' => 'Siswa Diperbarui Bendahara',
             'username' => 'siswa-diperbarui',
+            'nisn' => '9000000003',
             'email' => 'siswa-diperbarui@example.test',
             'password' => 'password-baru',
             'password_confirmation' => 'password-baru',
