@@ -85,5 +85,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(StudentBulkSeeder::class);
+        $this->call(AccountCredentialsSeeder::class);
+        $this->call(PaymentBulkSeeder::class);
     }
 }
